@@ -1,0 +1,33 @@
+{
+  "manifest": {
+    "description": "Send audio to a VBAN receiver over UDP (PCM 16/24-bit)."
+  },
+  "config_entries": {
+    "host": {
+      "label": "VBAN receiver IPv4 address",
+      "description": "IPv4 address of the device receiving audio."
+    },
+    "port": {"label": "VBAN UDP port"},
+    "stream_name": {
+      "label": "VBAN stream name",
+      "description": "1–16 printable ASCII characters; must match the receiver exactly."
+    },
+    "sample_rate": {"label": "Sample rate"},
+    "channels": {"label": "Channels", "options": {"1": "Mono", "2": "Stereo"}},
+    "bit_depth": {"label": "PCM bit depth", "options": {"16": "16 bit", "24": "24 bit"}},
+    "packet_frames": {
+      "label": "Audio frames per packet",
+      "description": "Clamped to the VBAN datagram limit (239 for 24-bit stereo)."
+    }
+  },
+  "setup_flow": {
+    "user": {
+      "title": "VBAN receiver",
+      "description": "Enter the receiver's unicast IPv4 address. Enable its incoming VBAN stream and use exactly the same stream name, UDP port and audio format."
+    }
+  },
+  "errors": {
+    "invalid_configuration": "Check the IPv4 address, port, sample rate, channels and bit depth. The stream name must contain 1–16 printable ASCII characters."
+  }
+}
+

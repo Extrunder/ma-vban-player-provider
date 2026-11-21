@@ -23,7 +23,7 @@ def main() -> None:
         )
     if not (providers.parent / "mass.py").is_file():
         parser.error("Target is not a Music Assistant source/package directory (mass.py missing)")
-    source = Path(__file__).resolve().parents[1] / "music_assistant" / "providers" / "vban"
+    source = Path(__file__).resolve().parents[1] / "vban"
     target = providers / "vban"
     if target.exists():
         parser.error(f"{target} already exists; preserve/remove the old copy before reinstalling")

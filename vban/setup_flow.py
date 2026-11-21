@@ -1,4 +1,4 @@
-"""Native setup/reconfigure form for Music Assistant 2.10.13."""
+"""Native setup/reconfigure form for the VBAN community provider."""
 
 from __future__ import annotations
 

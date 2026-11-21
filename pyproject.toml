@@ -1,9 +1,13 @@
 [project]
 name = "ma-vban-player"
-version = "0.1.0"
-description = "VBAN PCM player provider for Music Assistant 2.10.13"
+version = "0.2.0"
+description = "VBAN audio player community provider for Music Assistant"
+license = "Apache-2.0"
 requires-python = ">=3.14"
 dependencies = []
+
+[tool.uv]
+package = false
 
 [dependency-groups]
 dev = [

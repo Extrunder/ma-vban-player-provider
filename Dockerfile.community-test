@@ -1,0 +1,7 @@
+# Test-only image: load the provider externally, without copying into the MA package.
+ARG SERVER_IMAGE=ghcr.io/music-assistant/server:nightly
+FROM ${SERVER_IMAGE}
+COPY vban /provider-source/vban
+COPY scripts/smoke_test.py /checks/smoke_test.py
+ENV VBAN_PROVIDER_ROOT=/provider-source
+ENTRYPOINT ["python", "/checks/smoke_test.py"]

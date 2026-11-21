@@ -7,8 +7,8 @@ import pytest
 from music_assistant_models.config_entries import ConfigEntry
 from music_assistant_models.provider import ProviderManifest
 
-from music_assistant.providers.vban.config import config_entries
-from music_assistant.providers.vban.protocol import (
+from vban.config import config_entries
+from vban.protocol import (
     HEADER,
     MAX_PACKET_SIZE,
     VBANConfig,
@@ -97,7 +97,7 @@ def test_real_ma_models_validate_manifest_and_config():
     import json
     from pathlib import Path
 
-    path = Path(__file__).parents[1] / "music_assistant/providers/vban/manifest.json"
+    path = Path(__file__).parents[1] / "vban/manifest.json"
     manifest = ProviderManifest.from_dict(json.loads(path.read_text()))
     assert manifest.domain == "vban" and manifest.multi_instance
     entries = config_entries()

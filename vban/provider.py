@@ -6,7 +6,7 @@ from music_assistant.models.player_provider import PlayerProvider
 from music_assistant_models.config_entries import ConfigEntry
 from music_assistant_models.errors import SetupFailedError
 
-from .player import VBANPlayer
+from .player import LEGACY_PLAYER_API, VBANPlayer
 from .protocol import VBANConfig
 
 
@@ -33,6 +33,11 @@ class VBANProvider(PlayerProvider):
             raise SetupFailedError(f"Invalid VBAN configuration: {err}") from err
 
     async def discover_players(self) -> None:
-        player_id = f"vban_{self.instance_id}"
-        if not self.mass.players.get_player(player_id):
-            await self.mass.players.register(VBANPlayer(self, player_id, self.vban_config))
+        protocol_id = f"vban_{self.instance_id}"
+        existing = (
+            self.mass.players.get_player(protocol_id)
+            if LEGACY_PLAYER_API
+            else self.get_protocol(protocol_id)
+        )
+        if existing is None:
+            await self.mass.players.register(VBANPlayer(self, protocol_id, self.vban_config))

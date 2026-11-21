@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from music_assistant.providers.vban.setup_flow import run_setup
+from vban.setup_flow import run_setup
 
 
 class Session:

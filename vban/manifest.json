@@ -4,10 +4,13 @@
   "stage": "beta",
   "name": "VBAN Player",
   "description": "Send audio to a VBAN receiver over UDP (PCM 16/24-bit).",
-  "codeowners": [],
+  "codeowners": [
+    "@Extrunder"
+  ],
   "requirements": [],
   "multi_instance": true,
   "builtin": false,
-  "icon": "speaker-wireless"
+  "icon": "speaker-wireless",
+  "documentation": "https://github.com/Extrunder/ma-vban-player-provider#readme",
+  "support_url": "https://github.com/Extrunder/ma-vban-player-provider/issues"
 }
-

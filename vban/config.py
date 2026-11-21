@@ -19,7 +19,6 @@ def config_entries() -> tuple[ConfigEntry, ...]:
             type=ConfigEntryType.INTEGER,
             label="VBAN UDP port",
             default_value=6980,
-            range=(1, 65535),
         ),
         ConfigEntry(
             key="stream_name",

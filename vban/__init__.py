@@ -1,4 +1,4 @@
-"""VBAN player provider for Music Assistant 2.10.13."""
+"""VBAN player community provider for Music Assistant."""
 
 from __future__ import annotations
 

@@ -20,8 +20,8 @@ def main() -> None:
             "uv.lock",
         )
     ]
-    files.extend((root / "music_assistant" / "providers" / "vban").glob("*.py"))
-    files.extend((root / "music_assistant" / "providers" / "vban").glob("*.json"))
+    files.extend((root / "vban").rglob("*.py"))
+    files.extend((root / "vban").rglob("*.json"))
     files.extend((root / "scripts").glob("*.py"))
     files.extend((root / "tests").glob("*.py"))
     with ZipFile(destination, "w", ZIP_DEFLATED) as archive:

@@ -1,150 +1,116 @@
-# VBAN Player для Music Assistant
+# VBAN Player — Music Assistant community provider
 
-Нативный провайдер **Player** для Music Assistant **2.10.13** (API schema 65,
-`music-assistant-models==1.1.205`, Python 3.14). Версия сверена с сервером
-<http://192.0.2.10:8095/info>.
+A native player provider that sends Music Assistant audio to a VBAN receiver over UDP.
+It uses the normal music sources, queue, decoder and DSP, with no additional Python dependencies.
 
-Плеер принимает аудио из Music Assistant, декодирует его штатным трактом MA
-и передаёт на VBAN-приёмник по UDP. Сервисы музыки, очередь и управление
-остаются в Music Assistant. Отдельный API-токен для провайдера не нужен.
+**Status:** community release 0.2.0; catalog admission is pending.
+Source and releases: [Extrunder/ma-vban-player-provider](https://github.com/Extrunder/ma-vban-player-provider).
+Music Assistant 2.10.13 has no community installer. Installation through the Marketplace
+requires a server channel that supports the catalog and a VBAN release admitted to it.
+A ZIP alone cannot be installed through the MA API.
 
-Поддерживается:
+## Features
 
-- PCM signed little-endian, 16/24 бит, mono/stereo; 44,1/48/96 кГц в интерфейсе.
-- Play, pause/resume, stop, программные volume/mute.
-- Непрерывный flow stream очереди, включая переходы и crossfade средствами MA.
-- Фильтры/DSP из штатного output plan Music Assistant.
-- Несколько приёмников: отдельный экземпляр провайдера для каждого.
-- Проверка параметров до сохранения, ограничение размера пакетов, 32-битный
-  счётчик, темп передачи по монотонным часам и закрытие тракта при остановке.
+- Signed little-endian PCM, 16/24-bit, mono/stereo, 44.1/48/96 kHz in the setup form.
+- Play, pause/resume, stop, software volume and mute.
+- Continuous queue flow, MA transitions/crossfades and output-plan filters/DSP.
+- Multiple receivers, independently configured, with stable player IDs.
+- Frame-aligned packets, monotonic pacing, bounded buffers and cancellation cleanup.
+- English texts and Russian translations.
 
-## Установка в Home Assistant OS
+## Install from the community catalog
 
-Сторонний Python-провайдер нельзя загрузить через HTTP API или установить как
-интеграцию HACS. MA 2.10.13 ищет провайдеры внутри своего пакета
-`music_assistant/providers`. Для HA OS подготовлена **локальная App**: тот же
-официальный образ MA 2.10.13 с добавленным каталогом `vban`.
+Once published, admitted and offered for your MA channel:
 
-1. Получите архив `dist/music_assistant_vban-0.1.0.zip` командой:
+1. Sign in to MA as an administrator and enable the community catalog in the Marketplace.
+2. Install **VBAN Player**, then add/configure its player provider.
+3. Enter the receiver's IPv4 address, UDP port, exact stream name and audio format.
+4. Enable the matching incoming stream on the receiver and select the player in MA.
 
-   ```powershell
-   python scripts/package_app.py
-   ```
+The server manages community-provider storage separately from its installed Python package.
+No custom MA image is needed. Updating/recreating the container retains providers when the
+persistent MA data is retained. A clean reinstall deleting those data requires reinstalling
+or restoring a backup. Compatibility is checked by the catalog for each server channel.
 
-2. Распакуйте каталог `music_assistant_vban` из архива в `/addons/` на хосте
-   Home Assistant, например через Samba или SSH. В итоге должны существовать
-   `/addons/music_assistant_vban/config.yaml` и
-   `/addons/music_assistant_vban/Dockerfile`.
-3. В магазине Apps обновите список локальных Apps и установите
-   **Music Assistant with VBAN Player**. Supervisor соберёт образ сам.
-4. Перед запуском остановите официальную Music Assistant App: обе используют
-   одинаковые порты. Новая App имеет **отдельные данные**, библиотеку и настройки;
-   существующие данные автоматически не переносятся. Оригинальную App можно
-   снова запустить после остановки новой.
-5. Откройте новую App и пройдите обычную первоначальную настройку MA.
-6. В Music Assistant откройте **Settings → Providers → Add provider → VBAN Player**.
-   Введите параметры приёмника и сохраните. Новый плеер появится в списке Players.
+[Инструкция на русском](docs/INSTALL_RU.md).
 
-Это локальная сборка, а не обновление установленной официальной App. Она
-зафиксирована на MA 2.10.13; обновление базовой версии требует повторной проверки
-интерфейсов провайдера. Сборка и установка требуют доступа к GitHub Container Registry.
+## Receiver settings
 
-## Docker на Linux
-
-```sh
-docker compose up -d --build
-```
-
-Откройте `http://IP_DOCKER_ХОСТА:8095`. Используются host network и **новый** каталог
-`./data`. Не запускайте одновременно с другим MA на тех же портах. Команда не
-подключает данные существующего сервера. На Docker Desktop доступ к LAN через
-host network зависит от настроек Desktop; штатный вариант развёртывания — Linux.
-
-## Установка в исходники или Python-окружение MA
-
-При остановленном сервере выполните:
-
-```sh
-python scripts/install_provider.py --providers-dir /path/to/music_assistant/providers
-```
-
-Установщик проверяет целевой каталог и отказывается перезаписывать существующий
-`vban`. После перезапуска добавьте провайдер через интерфейс MA. Обычное обновление
-пакета или пересоздание контейнера может удалить вручную установленный модуль;
-для контейнеров используйте поставляемый Dockerfile.
-
-## Параметры VBAN
-
-| Параметр | По умолчанию | Назначение |
+| Setting | Default | Meaning |
 |---|---|---|
-| Receiver IPv4 address | Обязательный ввод | IP устройства, которое принимает звук |
-| UDP port | `6980` | Входящий порт VBAN-приёмника |
-| Stream name | `MusicAssistant` | 1–16 печатных ASCII-символов, регистр учитывается |
-| Sample rate | `48000` | 44100, 48000 или 96000 Гц |
-| Channels | `2` | Mono/stereo |
-| PCM bit depth | `16` | 16 или 24 бита |
-| Audio frames per packet | `128` | 1–256; для 24-bit stereo максимум автоматически 239 |
+| Receiver IPv4 address | Required | Device receiving audio |
+| UDP port | `6980` | Incoming VBAN port |
+| Stream name | `MusicAssistant` | 1–16 printable ASCII characters, case-sensitive |
+| Sample rate | `48000` | 44100, 48000 or 96000 Hz |
+| Channels | `2` | Mono or stereo |
+| PCM bit depth | `16` | 16 or 24 bits |
+| Frames per packet | `128` | 1–256; clamped to 239 for 24-bit stereo |
 
-Меняйте адрес и формат через **Reconfigure** в настройках провайдера. ID плеера
-зависит от экземпляра провайдера, поэтому сохраняется при изменении IP или имени
-потока. Чтобы переименовать плеер, используйте его настройки в MA.
+Use **Reconfigure** to change receiver settings. The player ID stays the same. On Voicemeeter,
+enable VBAN and the incoming stream, match its name/port, allow the MA host's source IP and
+choose the destination strip/output. UDP must be routable from MA to the receiver.
 
-На устройстве включите **входящий** VBAN-поток, укажите то же имя потока и UDP-порт.
-Если приёмник ограничивает IP отправителя, разрешите IP хоста Music Assistant.
-Согласуйте частоту, каналы и разрядность; в Voicemeeter включите VBAN и нужную
-строку Incoming Streams, выберите выходную шину. Между сервером и приёмником
-должен проходить UDP на настроенный порт. `192.0.2.10` — адрес MA, он не
-подставляется автоматически как адрес VBAN-приёмника.
+Volume/mute modify samples, not hardware volume. 100% means no attenuation. Mute sends zero
+PCM; pause/stop stop packets. A paused live source may resume behind the live edge.
+UDP has no delivery acknowledgement: `available` means configured, not confirmed online.
+Errors end playback and appear in the log and `last_error`. Automatic VBAN discovery,
+device power control and synchronised receiver clocks are not implemented.
 
-Volume/mute изменяют PCM в отправителе, не аппаратный регулятор приёмника.
-100% означает отсутствие ослабления. Во время mute продолжают передаваться
-нулевые PCM-сэмплы; pause и stop прекращают пакеты. При pause источник получает
-обратное давление: live-радио после продолжения может отставать от прямого эфира.
+## Develop and test
 
-VBAN UDP не подтверждает доставку: `available` означает, что плеер настроен,
-а не что устройство отвечает. Ошибка отправки/декодирования завершает поток и
-появляется в `last_error` и журнале MA. Автообнаружение, удалённое включение
-устройства и синхронизация часов между несколькими приёмниками не реализованы.
-
-## Проверки
+The canonical provider is [`vban/`](vban/); there is no duplicate inside the MA package.
+Quick tests run on Windows, Linux or macOS with Python 3.14:
 
 ```sh
-uv sync --group dev
+uv sync --locked --group dev
 uv run pytest -q
 uv run ruff check .
 uv run ruff format --check .
+uv run python scripts/package_community.py
 ```
 
-Тесты проверяют заголовки и PCM, произвольные границы входных чанков, настоящую
-UDP-передачу на loopback, pacing, паузу, громкость, завершение и отмену, переполнение
-счётчика, setup/reconfigure и совместимость конфигурации с моделями MA 1.1.205.
-
-Проверено при реализации: **48 тестов проходят**, Ruff проходит, Docker-образ
-собирается. Интеграционный smoke test в официальном образе MA 2.10.13 проходит
-для обоих форматов: настоящий загрузчик провайдера, регистрация Player, декодирование
-WAV через FFmpeg, программная громкость, побайтовая проверка UDP PCM и выгрузка плеера.
-
-Для проверки с настоящими классами и FFmpeg сервера без запуска пользовательского MA:
+Exercise actual community loading, native Player registration, FFmpeg, software volume and
+byte-accurate loopback UDP without changing an existing MA instance:
 
 ```sh
-docker build -t music-assistant-vban:2.10.13 .
-docker run --rm --network none --entrypoint python \
-  --mount type=bind,source="$PWD/scripts",target=/checks,readonly \
-  music-assistant-vban:2.10.13 /checks/smoke_test.py
+docker build -f Dockerfile.community-test -t vban-community-check .
+docker run --rm --network none vban-community-check
 ```
 
-В PowerShell вместо bind mount можно передать проверку через stdin:
+The test keeps source outside the installed MA package, asserts the `community` tier and
+uses temporary data. Discovery is restricted to IPv4 loopback; optional device providers
+are suppressed. Pin the image with `--build-arg SERVER_IMAGE=...` when needed.
+CI separately invokes the official catalog's reusable workflow for `folder: vban`, `channel: nightly`.
 
-```powershell
-Get-Content -Raw scripts/smoke_test.py | docker run --rm -i --network none --entrypoint python music-assistant-vban:2.10.13 -
+Local validation: **56 tests pass**, the official catalog checker reports `vban: passed`,
+and real community loading/audio/unload passes in MA `2.11.0.dev2026112103`.
+[Exact images, checks and limits](docs/VALIDATION.md).
+
+Before admission, the official **Music Assistant DEV SERVER** App can load a public
+repository through **Provider repository**, using a separate test MA installation.
+
+## Publish
+
+Configure the real GitHub repository and maintainer; no placeholder identity is published:
+
+```sh
+python scripts/configure_repository.py Extrunder/ma-vban-player-provider --maintainer Extrunder
+python scripts/package_community.py --check-publication --version 0.2.0
 ```
 
-Проверка использует временный профиль MA и loopback; обнаружение mDNS в тесте
-ограничено IPv4 loopback, поскольку в `--network none` нет обычного сетевого адаптера.
+Push, pass CI, publish `v0.2.0` using **Publish release**, and submit to the catalog.
+Publication and admission are distinct; catalog maintainers decide admission.
+[Full procedure](docs/SUBMISSION.md).
 
-Сетевая проверка на физическом VBAN-устройстве требует его IP и параметров
-входящего потока. Реализация не изменяет сервер по адресу `192.0.2.10`.
+The original provider was tested with MA 2.10.13/models 1.1.205. The old manual installer
+and image/App packaging remain legacy development options, not the community mechanism.
 
-Источники интерфейсов: [MA 2.10.13](https://github.com/music-assistant/server/tree/2.10.13),
-[VBAN protocol](https://vb-audio.com/Voicemeeter/VBANProtocol_Specifications.pdf).
+## Licence and references
+
+Apache-2.0. See [LICENSE](LICENSE).
+Official logo sources and credits: [Artwork](docs/ARTWORK.md).
+
+- [Building a provider](https://developers.music-assistant.io/building-a-provider/)
+- [Community catalog](https://github.com/music-assistant/community-catalog)
+- [VBAN specification](https://vb-audio.com/Voicemeeter/VBANProtocol_Specifications.pdf)
 

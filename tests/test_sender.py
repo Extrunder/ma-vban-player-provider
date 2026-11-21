@@ -6,8 +6,8 @@ from contextlib import suppress
 
 import pytest
 
-from music_assistant.providers.vban.protocol import HEADER, VBANConfig
-from music_assistant.providers.vban.sender import VBANSender
+from vban.protocol import HEADER, VBANConfig
+from vban.sender import VBANSender
 
 
 @pytest.fixture

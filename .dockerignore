@@ -1,7 +1,10 @@
 *
-!music_assistant/
-!music_assistant/providers/
-!music_assistant/providers/vban/
-!music_assistant/providers/vban/*.py
-!music_assistant/providers/vban/*.json
+!vban/
+!vban/*.py
+!vban/*.json
+!vban/*.svg
+!vban/translations/
+!vban/translations/*.json
+!scripts/
+!scripts/smoke_test.py
 

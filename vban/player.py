@@ -9,7 +9,6 @@ from contextlib import aclosing, suppress
 from typing import TYPE_CHECKING
 
 from music_assistant.helpers.ffmpeg import get_ffmpeg_stream
-from music_assistant.models.player import Player
 from music_assistant_models.enums import ContentType, IdentifierType, PlaybackState, PlayerFeature
 from music_assistant_models.media_items import AudioFormat
 from music_assistant_models.player import DeviceInfo, PlayerMedia
@@ -17,11 +16,22 @@ from music_assistant_models.player import DeviceInfo, PlayerMedia
 from .protocol import VBANConfig
 from .sender import VBANSender
 
+try:
+    from music_assistant.models.player_protocol import PlayerProtocol as PlayerBase
+except ModuleNotFoundError as err:
+    if err.name != "music_assistant.models.player_protocol":
+        raise
+    from music_assistant.models.player import Player as PlayerBase
+
+    LEGACY_PLAYER_API = True
+else:
+    LEGACY_PLAYER_API = False
+
 if TYPE_CHECKING:
     from .provider import VBANProvider
 
 
-class VBANPlayer(Player):
+class VBANPlayer(PlayerBase):
     """Output-only receiver; reported availability means configured, not acknowledged."""
 
     def __init__(self, provider: VBANProvider, player_id: str, config: VBANConfig) -> None:
@@ -52,6 +62,13 @@ class VBANPlayer(Player):
         self._extra_attributes["receiver_status"] = "unconfirmed (UDP has no acknowledgement)"
 
     @property
+    def output_player_id(self) -> str:
+        """Resolve the user-visible player when the modern protocol API is in use."""
+        if LEGACY_PLAYER_API:
+            return self.player_id
+        return self.player.player_id if self.player is not None else self.protocol_id
+
+    @property
     def requires_flow_mode(self) -> bool:
         """Keep tracks, crossfades and queue transitions in one PCM stream."""
         return True
@@ -68,7 +85,7 @@ class VBANPlayer(Player):
             self._attr_playback_state = PlaybackState.PLAYING
             self.update_state()
             self._stream_task = asyncio.create_task(
-                self._stream(media), name=f"vban_stream_{self.player_id}"
+                self._stream(media), name=f"vban_stream_{self.output_player_id}"
             )
 
     async def _stream(self, media: PlayerMedia) -> None:
@@ -78,20 +95,21 @@ class VBANPlayer(Player):
             raise
         except Exception as err:
             self._extra_attributes["last_error"] = str(err)
-            self.logger.exception("VBAN playback failed for %s", self.player_id)
+            self.logger.exception("VBAN playback failed for %s", self.output_player_id)
         finally:
             self._attr_playback_state = PlaybackState.IDLE
             self._attr_elapsed_time = self._sender.sent_frames / self._format.sample_rate
             self._attr_elapsed_time_last_updated = time.time()
-            self.update_state()
+            if LEGACY_PLAYER_API or self.player is not None:
+                self.update_state()
 
     async def _audio_source(self, media: PlayerMedia) -> AsyncGenerator[bytes]:
-        source = self.mass.streams.get_stream(media, self._format, self.player_id)
+        source = self.mass.streams.get_stream(media, self._format, self.output_player_id)
         async with aclosing(source):
             # Match direct-PCM providers: get_stream selects/decodes media; the
             # output plan applies the player's DSP and channel filters once.
             plan = self.mass.streams.audio.get_player_output_plan(
-                self.player_id, self._format, self._format, handoff_format=self._format
+                self.output_player_id, self._format, self._format, handoff_format=self._format
             )
             if plan.filter_params:
                 filtered = get_ffmpeg_stream(
@@ -161,4 +179,11 @@ class VBANPlayer(Player):
 
     async def on_unload(self) -> None:
         await self.stop()
-        await super().on_unload()
+        if LEGACY_PLAYER_API:
+            await super().on_unload()
+
+    async def on_detach(self) -> None:
+        """Release the stream when a modern protocol is disabled or unloaded."""
+        await self._stop_stream()
+        if not LEGACY_PLAYER_API:
+            await super().on_detach()
