@@ -1,0 +1,7 @@
+*
+!music_assistant/
+!music_assistant/providers/
+!music_assistant/providers/vban/
+!music_assistant/providers/vban/*.py
+!music_assistant/providers/vban/*.json
+

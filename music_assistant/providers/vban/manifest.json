@@ -1,0 +1,13 @@
+{
+  "type": "player",
+  "domain": "vban",
+  "stage": "beta",
+  "name": "VBAN Player",
+  "description": "Send audio to a VBAN receiver over UDP (PCM 16/24-bit).",
+  "codeowners": [],
+  "requirements": [],
+  "multi_instance": true,
+  "builtin": false,
+  "icon": "speaker-wireless"
+}
+

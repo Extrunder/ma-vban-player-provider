@@ -1,0 +1,14 @@
+services:
+  music-assistant:
+    build:
+      context: .
+      args:
+        MA_VERSION: "2.10.13"
+    image: music-assistant-vban:2.10.13
+    container_name: music-assistant-vban
+    restart: unless-stopped
+    # Linux Docker host: required for discovery and routing to LAN receivers.
+    network_mode: host
+    volumes:
+      - ./data:/data
+

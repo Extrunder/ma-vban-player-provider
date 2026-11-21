@@ -1,0 +1,12 @@
+{
+  "setup_flow": {
+    "user": {
+      "title": "VBAN receiver",
+      "description": "Enter the receiver's unicast IPv4 address. Enable its incoming VBAN stream and use exactly the same stream name, UDP port and audio format."
+    }
+  },
+  "errors": {
+    "invalid_configuration": "Check the IPv4 address, port, sample rate, channels and bit depth. The stream name must contain 1–16 printable ASCII characters."
+  }
+}
+
