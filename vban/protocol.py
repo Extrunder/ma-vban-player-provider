@@ -102,19 +102,3 @@ def encode_packet(config: VBANConfig, pcm: bytes, counter: int) -> bytes:
         )
         + pcm
     )
-
-
-def apply_gain(pcm: bytes, bit_depth: int, gain: float) -> bytes:
-    """Apply software attenuation to signed little-endian 16/24-bit PCM."""
-    if gain >= 1.0:
-        return pcm
-    if gain <= 0.0:
-        return bytes(len(pcm))
-    width = bit_depth // 8
-    if bit_depth not in (16, 24) or len(pcm) % width:
-        raise ValueError("Unaligned or unsupported PCM samples")
-    result = bytearray(len(pcm))
-    for offset in range(0, len(pcm), width):
-        sample = int.from_bytes(pcm[offset : offset + width], "little", signed=True)
-        result[offset : offset + width] = int(sample * gain).to_bytes(width, "little", signed=True)
-    return bytes(result)

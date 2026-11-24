@@ -21,8 +21,8 @@ do not make it available in the Marketplace. Music Assistant 2.10.13 has no comm
    and set **Provider repository** to `Extrunder/ma-vban-player-provider@main`. It uses the same ports as
    normal MA, so stop the normal App before starting the test App. No production MA
    upgrade or data migration is performed by this project.
-6. Run the **Publish release** GitHub Actions workflow with version `0.2.0`.
-   It reruns CI, validates real repository metadata, and publishes `v0.2.0` as a normal
+6. Run the **Publish release** GitHub Actions workflow with version `0.2.1`.
+   It reruns CI, validates real repository metadata, and publishes `v0.2.1` as a normal
    GitHub release, not a draft or prerelease. The catalog downloads the tagged source,
    not a manually uploaded Python package.
 7. Open [Submit a provider](https://github.com/music-assistant/community-catalog/issues/new?template=submit-provider.yml)

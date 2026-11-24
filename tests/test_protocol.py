@@ -12,7 +12,6 @@ from vban.protocol import (
     HEADER,
     MAX_PACKET_SIZE,
     VBANConfig,
-    apply_gain,
     encode_packet,
 )
 
@@ -76,21 +75,6 @@ def test_reject_bad_config(changes):
 def test_reject_bad_payload(payload):
     with pytest.raises(ValueError):
         encode_packet(VBANConfig("127.0.0.1"), payload, 0)
-
-
-@pytest.mark.parametrize("bits", [16, 24])
-def test_gain_preserves_signed_pcm_and_mutes(bits):
-    width = bits // 8
-    samples = [-(2 ** (bits - 1)), -100, 0, 100, 2 ** (bits - 1) - 1]
-    pcm = b"".join(value.to_bytes(width, "little", signed=True) for value in samples)
-    scaled = apply_gain(pcm, bits, 0.5)
-    result = [
-        int.from_bytes(scaled[i : i + width], "little", signed=True)
-        for i in range(0, len(scaled), width)
-    ]
-    assert result == [int(value * 0.5) for value in samples]
-    assert apply_gain(pcm, bits, 0) == bytes(len(pcm))
-    assert apply_gain(pcm, bits, 1) == pcm
 
 
 def test_real_ma_models_validate_manifest_and_config():

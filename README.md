@@ -3,7 +3,7 @@
 A native player provider that sends Music Assistant audio to a VBAN receiver over UDP.
 It uses the normal music sources, queue, decoder and DSP, with no additional Python dependencies.
 
-**Status:** community release 0.2.0; catalog admission is pending.
+**Status:** community release 0.2.1; catalog admission is pending.
 Source and releases: [Extrunder/ma-vban-player-provider](https://github.com/Extrunder/ma-vban-player-provider).
 Music Assistant 2.10.13 has no community installer. Installation through the Marketplace
 requires a server channel that supports the catalog and a VBAN release admitted to it.
@@ -50,8 +50,13 @@ Use **Reconfigure** to change receiver settings. The player ID stays the same. O
 enable VBAN and the incoming stream, match its name/port, allow the MA host's source IP and
 choose the destination strip/output. UDP must be routable from MA to the receiver.
 
-Volume/mute modify samples, not hardware volume. 100% means no attenuation. Mute sends zero
-PCM; pause/stop stop packets. A paused live source may resume behind the live edge.
+Volume/mute modify samples, not hardware volume. The slider uses equal dB steps over a
+60 dB range: 100% is unchanged, 75% is -15 dB, 50% is -30 dB, and 0% is digital silence.
+This is quieter below 100% than the original linear-amplitude slider. NumPy, already included
+in MA, applies gain with bounded native array operations; no per-sample Python loop runs on
+the event loop. Changes take effect at the next packet without restarting FFmpeg or the stream.
+Mute sends zero PCM and preserves the volume setting; pause/stop stop packets.
+A paused live source may resume behind the live edge.
 UDP has no delivery acknowledgement: `available` means configured, not confirmed online.
 Errors end playback and appear in the log and `last_error`. Automatic VBAN discovery,
 device power control and synchronised receiver clocks are not implemented.
@@ -82,9 +87,18 @@ uses temporary data. Discovery is restricted to IPv4 loopback; optional device p
 are suppressed. Pin the image with `--build-arg SERVER_IMAGE=...` when needed.
 CI separately invokes the official catalog's reusable workflow for `folder: vban`, `channel: nightly`.
 
-Local validation: **56 tests pass**, the official catalog checker reports `vban: passed`,
+Local validation: **79 tests pass**, the official catalog checker reports `vban: passed`,
 and real community loading/audio/unload passes in MA `2.11.0.dev2026112103`.
 [Exact images, checks and limits](docs/VALIDATION.md).
+
+To compare gain processing with the previous scalar implementation on your own machine:
+
+```sh
+uv run python -m scripts.benchmark_gain --compare-scalar
+```
+
+The benchmark reports CPU milliseconds per second of audio per player, without decoding,
+networking or real-time waits. It is a measurement tool, not a CI timing threshold.
 
 Before admission, the official **Music Assistant DEV SERVER** App can load a public
 repository through **Provider repository**, using a separate test MA installation.
@@ -95,10 +109,10 @@ Configure the real GitHub repository and maintainer; no placeholder identity is 
 
 ```sh
 python scripts/configure_repository.py Extrunder/ma-vban-player-provider --maintainer Extrunder
-python scripts/package_community.py --check-publication --version 0.2.0
+python scripts/package_community.py --check-publication --version 0.2.1
 ```
 
-Push, pass CI, publish `v0.2.0` using **Publish release**, and submit to the catalog.
+Push, pass CI, publish `v0.2.1` using **Publish release**, and submit to the catalog.
 Publication and admission are distinct; catalog maintainers decide admission.
 [Full procedure](docs/SUBMISSION.md).
 

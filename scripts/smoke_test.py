@@ -33,8 +33,11 @@ async def receive(sock: socket.socket, count: int) -> list[bytes]:
     return packets
 
 
-async def check_player(mass: MusicAssistant, wav_path: Path, bits: int) -> None:
+async def check_player(
+    mass: MusicAssistant, wav_path: Path, long_wav_path: Path, bits: int
+) -> None:
     # The community loader registers its import location during server boot.
+    from music_assistant.providers.vban.audio import volume_to_gain
     from music_assistant.providers.vban.player import LEGACY_PLAYER_API, VBANPlayer
 
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
@@ -92,21 +95,47 @@ async def check_player(mass: MusicAssistant, wav_path: Path, bits: int) -> None:
                 int.from_bytes(payload[i : i + width], "little", signed=True)
                 for i in range(0, len(payload), width)
             ]
-            expected = 500 * (1 if bits == 16 else 256)
+            full_scale = 1000 * (1 if bits == 16 else 256)
+            expected = int(full_scale * volume_to_gain(50))
             assert max(samples) == expected and min(samples) == -expected
             await player.volume_mute(True)
             assert player._sender.gain == 0
             await player.volume_mute(False)
-            assert player._sender.gain == 0.5
+            assert player._sender.gain == volume_to_gain(50)
             await player.stop()
             assert player.current_media is None
             # Unload while a second FFmpeg/UDP stream is active, not just after EOF.
             reader = asyncio.create_task(receive(sock, 1))
             await player.play_media(
-                PlayerMedia(uri=str(wav_path), title="Unload cancellation test")
+                PlayerMedia(uri=str(long_wav_path), title="Live volume and unload test")
             )
             await asyncio.wait_for(reader, 10)
             assert player._stream_task is not None and not player._stream_task.done()
+            stream_task = player._stream_task
+
+            async def expect_level(level: int) -> None:
+                async with asyncio.timeout(5):
+                    while True:
+                        packet, _ = await asyncio.get_running_loop().sock_recvfrom(sock, 2048)
+                        samples = [
+                            int.from_bytes(packet[i : i + width], "little", signed=True)
+                            for i in range(28, len(packet), width)
+                        ]
+                        if max(samples) == level and min(samples) == -level:
+                            return
+
+            # Exercise actual PCM during the same running FFmpeg/UDP stream.
+            await player.volume_set(75)
+            await expect_level(int(full_scale * volume_to_gain(75)))
+            await player.volume_mute(True)
+            await expect_level(0)
+            await player.volume_set(25)
+            await expect_level(0)
+            await player.volume_mute(False)
+            await expect_level(int(full_scale * volume_to_gain(25)))
+            await player.volume_set(100)
+            await expect_level(full_scale)
+            assert player._stream_task is stream_task
             await mass.unload_provider(config.instance_id)
             if LEGACY_PLAYER_API:
                 assert mass.players.get_player(output_id) is None
@@ -132,11 +161,13 @@ async def main() -> None:
     with tempfile.TemporaryDirectory(prefix="ma-vban-smoke-") as directory:
         root = Path(directory)
         wav_path = root / "source.wav"
-        with wave.open(str(wav_path), "wb") as wav:
-            wav.setnchannels(2)
-            wav.setsampwidth(2)
-            wav.setframerate(48000)
-            wav.writeframes(struct.pack("<hh", 1000, -1000) * 4800)
+        long_wav_path = root / "long.wav"
+        for path, frames in ((wav_path, 4800), (long_wav_path, 480000)):
+            with wave.open(str(path), "wb") as wav:
+                wav.setnchannels(2)
+                wav.setsampwidth(2)
+                wav.setframerate(48000)
+                wav.writeframes(struct.pack("<hh", 1000, -1000) * frames)
         cache = root / "cache"
         cache.mkdir()
         provider_root = os.environ.get("VBAN_PROVIDER_ROOT")
@@ -168,8 +199,8 @@ async def main() -> None:
             if provider_root:
                 assert manifest.tier.value == "community", manifest.tier
                 print("PASS: provider discovered by the native community loader")
-            await check_player(mass, wav_path, 16)
-            await check_player(mass, wav_path, 24)
+            await check_player(mass, wav_path, long_wav_path, 16)
+            await check_player(mass, wav_path, long_wav_path, 24)
         finally:
             await mass.stop()
 

@@ -7,7 +7,8 @@ import socket
 from collections.abc import AsyncGenerator, Callable
 from contextlib import aclosing
 
-from .protocol import VBANConfig, apply_gain, encode_packet
+from .audio import apply_gain
+from .protocol import VBANConfig, encode_packet
 
 
 class VBANSender:

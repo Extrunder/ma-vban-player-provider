@@ -41,11 +41,11 @@ def test_publication_needs_actual_repository(release_tree, monkeypatch):
     manifest.pop("documentation", None)
     manifest["codeowners"] = []
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
-    assert validate(release_tree) == "0.2.0"
+    assert validate(release_tree) == "0.2.1"
     with pytest.raises(ValueError, match="configure_repository"):
         validate(release_tree, publication=True)
     configure(release_tree, "example-owner/ma-vban", "example-user")
-    assert validate(release_tree, publication=True, version="0.2.0") == "0.2.0"
+    assert validate(release_tree, publication=True, version="0.2.1") == "0.2.1"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["codeowners"] == ["@example-user"]
     assert manifest["support_url"] == "https://github.com/example-owner/ma-vban/issues"

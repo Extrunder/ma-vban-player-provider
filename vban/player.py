@@ -13,6 +13,7 @@ from music_assistant_models.enums import ContentType, IdentifierType, PlaybackSt
 from music_assistant_models.media_items import AudioFormat
 from music_assistant_models.player import DeviceInfo, PlayerMedia
 
+from .audio import volume_to_gain
 from .protocol import VBANConfig
 from .sender import VBANSender
 
@@ -174,7 +175,9 @@ class VBANPlayer(PlayerBase):
         self._update_gain()
 
     def _update_gain(self) -> None:
-        self._sender.gain = 0 if self._attr_volume_muted else self._attr_volume_level / 100
+        self._sender.gain = (
+            0 if self._attr_volume_muted else volume_to_gain(self._attr_volume_level)
+        )
         self.update_state()
 
     async def on_unload(self) -> None:

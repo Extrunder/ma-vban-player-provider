@@ -6,6 +6,7 @@ from contextlib import suppress
 
 import pytest
 
+from vban.audio import volume_to_gain
 from vban.protocol import HEADER, VBANConfig
 from vban.sender import VBANSender
 
@@ -101,6 +102,45 @@ async def test_pause_resume_gain_and_cancellation(receiver):
     task.cancel()
     with suppress(asyncio.CancelledError):
         await task
+    assert closed.is_set()
+
+
+@pytest.mark.parametrize("bits", [16, 24])
+async def test_live_gain_changes_at_packet_boundary_without_restarting(receiver, bits):
+    config = VBANConfig(
+        "127.0.0.1", port=receiver.getsockname()[1], bit_depth=bits, packet_frames=128
+    )
+    sender = VBANSender(config)
+    width = bits // 8
+    value = 1000 if bits == 16 else 256000
+    pcm = value.to_bytes(width, "little", signed=True) * (128 * 2)
+    request_packet = asyncio.Queue()
+    closed = asyncio.Event()
+
+    async def source():
+        try:
+            while True:
+                await request_packet.get()
+                yield pcm
+        finally:
+            closed.set()
+
+    task = asyncio.create_task(sender.run(source()))
+    try:
+        # Changes during one ongoing stream: unity -> attenuation -> mute -> restore.
+        gains = [1.0, volume_to_gain(50), 0.0, volume_to_gain(25), 1.0]
+        for counter, gain in enumerate(gains):
+            sender.gain = gain
+            request_packet.put_nowait(None)
+            packet = (await receive(receiver, 1))[0][0]
+            assert HEADER.unpack(packet[:28])[-1] == counter
+            assert packet[28:] == int(value * gain).to_bytes(width, "little", signed=True) * (
+                128 * 2
+            )
+    finally:
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
     assert closed.is_set()
 
 
